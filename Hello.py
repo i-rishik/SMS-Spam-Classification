@@ -1,51 +1,51 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import streamlit as st
-from streamlit.logger import get_logger
+import pickle
+import string
+import nltk
+from nltk.stem.porter import PorterStemmer
+nltk.download('punkt')
+nltk.download('stopwords')
+from nltk.corpus import stopwords
 
-LOGGER = get_logger(__name__)
+ps = PorterStemmer()
 
+def transform_data(text):
+    text = text.lower()
+    text = nltk.word_tokenize(text)
+    res = []
+    for i in text:
+        if i.isalnum():
+            res.append(i)
+    
+    text.clear()
+    
+    for i in res:
+        if i not in stopwords.words('english') and i not in string.punctuation:
+            text.append(i)
+            
+    res.clear()
+    
+    for i in text:
+        res.append(ps.stem(i))
+    
+    return ' '.join(res)
 
-def run():
-    st.set_page_config(
-        page_title="Hello",
-        page_icon="👋",
-    )
+cv = pickle.load(open('vectorizer.pkl','rb'))
+model = pickle.load(open('model.pkl','rb'))
 
-    st.write("# Welcome to Streamlit! 👋")
+st.title("Email Spam Classifier")
+input_sms = st.text_area("Enter the message")
 
-    st.sidebar.success("Select a demo above.")
+if st.button('Predict'):
 
-    st.markdown(
-        """
-        Streamlit is an open-source app framework built specifically for
-        Machine Learning and Data Science projects.
-        **👈 Select a demo from the sidebar** to see some examples
-        of what Streamlit can do!
-        ### Want to learn more?
-        - Check out [streamlit.io](https://streamlit.io)
-        - Jump into our [documentation](https://docs.streamlit.io)
-        - Ask a question in our [community
-          forums](https://discuss.streamlit.io)
-        ### See more complex demos
-        - Use a neural net to [analyze the Udacity Self-driving Car Image
-          Dataset](https://github.com/streamlit/demo-self-driving)
-        - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
-    """
-    )
-
-
-if __name__ == "__main__":
-    run()
+    # 1. preprocess
+    transformed_sms = transform_data(input_sms)
+    # 2. vectorize
+    vector_input = cv.transform([transformed_sms])
+    # 3. predict
+    result = model.predict(vector_input)[0]
+    # 4. Display
+    if result == 1:
+        st.header("Spam")
+    else:
+        st.header("Not Spam")
