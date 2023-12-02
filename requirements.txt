@@ -3,5 +3,5 @@ numpy
 pandas
 pydeck
 streamlit
-nltk
+nltk==3.8.1
 scikit-learn
